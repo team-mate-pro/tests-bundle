@@ -1,0 +1,50 @@
+{
+    "name": "team-mate-pro/tests-bundle",
+    "description": "Testing utilities and helpers for Symfony test environment",
+    "version": "1.0.0",
+    "type": "symfony-bundle",
+    "require": {
+        "php": ">=8.2",
+        "symfony/framework-bundle": ">=7.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0",
+        "brianium/paratest": "^7.0",
+        "phpstan/phpstan": "*",
+        "phpstan/phpstan-phpunit": "*",
+        "phpstan/phpstan-symfony": "*",
+        "phpstan/extension-installer": "*",
+        "team-mate-pro/make": "^1.0",
+        "team-mate-pro/contracts": "^1.0.3",
+        "squizlabs/php_codesniffer": "^4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "TeamMatePro\\TestsBundle\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "TeamMatePro\\TestsBundle\\Tests\\": "tests/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Sebastian Twaróg",
+            "email": "sebastian.twarog1989@gmail.com"
+        }
+    ],
+    "scripts": {
+        "phpunit": "APP_ENV=test ./vendor/bin/phpunit tests --testdox --colors=always",
+        "tests:unit": "@phpunit",
+        "phpcs": "php ./vendor/bin/phpcs --standard=phpcs.xml --exclude=Generic.Files.LineLength",
+        "phpcs:fix": "php ./vendor/bin/phpcbf --standard=phpcs.xml --exclude=Generic.Files.LineLength",
+        "phpstan": "php vendor/phpstan/phpstan/phpstan analyse --memory-limit=1G",
+        "phpstan:baseline": "php ./vendor/bin/phpstan analyse -c phpstan.neon --memory-limit 1G --generate-baseline"
+    },
+    "config": {
+        "allow-plugins": {
+            "phpstan/extension-installer": true
+        }
+    }
+}

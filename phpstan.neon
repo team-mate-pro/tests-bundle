@@ -1,0 +1,22 @@
+includes:
+    - phpstan-baseline.neon
+
+parameters:
+    level: max
+    paths:
+        - src
+        - tests
+
+    excludePaths:
+        - tests/_Data
+        - vendor
+
+    # Ignore errors for test-specific patterns
+
+    # Additional strictness
+    checkTooWideReturnTypesInProtectedAndPublicMethods: true
+    checkUninitializedProperties: true
+    checkDynamicProperties: true
+
+    # Don't be overly strict with PHPDoc types in tests
+    treatPhpDocTypesAsCertain: false

@@ -1,0 +1,11 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tests-bundle-app
+    working_dir: /app
+    volumes:
+      - .:/app
+    environment:
+      - APP_ENV=test
