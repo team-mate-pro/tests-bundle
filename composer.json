@@ -3,9 +3,10 @@
     "description": "Testing utilities and helpers for Symfony test environment",
     "version": "1.0.0",
     "type": "symfony-bundle",
+    "license": "MIT",
     "require": {
         "php": ">=8.2",
-        "symfony/framework-bundle": ">=7.0"
+        "symfony/framework-bundle": "^6.4|^7.0"
     },
     "require-dev": {
         "phpunit/phpunit": "^10.0",
