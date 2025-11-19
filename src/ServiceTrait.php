@@ -24,7 +24,7 @@ use RuntimeException;
  *
  *     public function testSomething(): void
  *     {
- *         $myService = $this->service(MyService::class);
+ *         $myService = $this->getService(MyService::class);
  *         // ... test logic
  *     }
  * }
@@ -39,7 +39,7 @@ trait ServiceTrait
      * @param class-string<T> $serviceId The service class name
      * @return T The service instance
      */
-    protected function service(string $serviceId): object
+    protected function getService(string $serviceId): object
     {
         $container = $this->getTestContainer();
 

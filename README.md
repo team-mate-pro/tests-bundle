@@ -39,7 +39,7 @@ final class UserRepositoryTest extends IntegrationTest
 {
     public function testFindUser(): void
     {
-        $repository = $this->service(UserRepository::class);
+        $repository = $this->getService(UserRepository::class);
         $user = $repository->find(1);
 
         $this->assertInstanceOf(User::class, $user);
