@@ -1,7 +1,7 @@
 {
     "name": "team-mate-pro/tests-bundle",
     "description": "Testing utilities and helpers for Symfony test environment",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "type": "symfony-bundle",
     "license": "MIT",
     "require": {
