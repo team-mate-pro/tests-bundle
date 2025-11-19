@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace TeamMatePro\TestsBundle;
 
-use Psr\Container\ContainerInterface;
-use RuntimeException;
+use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
 
 /**
  * Provides convenient service access for integration & application tests.
@@ -39,45 +38,14 @@ trait ServiceTrait
      * @param class-string<T> $serviceId The service class name
      * @return T The service instance
      */
-    protected function getService(string $serviceId): object
+    protected static function getService(string $serviceId): object
     {
-        $container = $this->getTestContainer();
+        $s = self::getContainer()->get($serviceId);
 
-        if (!$container->has($serviceId)) {
-            throw new RuntimeException(
-                sprintf('Service "%s" not found in container', $serviceId)
-            );
+        if (!$s) {
+            throw new ServiceNotFoundException($serviceId);
         }
 
-        $service = $container->get($serviceId);
-
-        if (!$service instanceof $serviceId) {
-            throw new RuntimeException(
-                sprintf(
-                    'Service "%s" is not an instance of "%s"',
-                    get_class($service),
-                    $serviceId
-                )
-            );
-        }
-
-        return $service;
-    }
-
-    /**
-     * Gets the test container.
-     *
-     * This method relies on KernelTestCase::getContainer() being available.
-     */
-    private function getTestContainer(): ContainerInterface
-    {
-        if (!method_exists($this, 'getContainer')) {
-            throw new RuntimeException(
-                'ServiceTrait requires getContainer() method. ' .
-                'Make sure your test class extends Symfony\Bundle\FrameworkBundle\Test\KernelTestCase'
-            );
-        }
-
-        return $this->getContainer();
+        return $s;
     }
 }
