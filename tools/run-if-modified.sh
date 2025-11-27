@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/sh
 
 # Usage: ./run-if-modified.sh "command to run" /path/to/watch
 
