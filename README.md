@@ -47,6 +47,103 @@ final class UserRepositoryTest extends IntegrationTest
 }
 ```
 
+### PerformanceTrait - Performance Testing Assertions
+
+The `PerformanceTrait` provides assertions for measuring and validating execution time and memory usage in your tests.
+
+**Key Benefits:**
+- Assert execution time limits (in milliseconds)
+- Assert memory usage limits (in megabytes)
+- Compare performance between invocations
+- High-precision timing using `hrtime()`
+
+**Usage:**
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests;
+
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use TeamMatePro\TestsBundle\PerformanceTrait;
+
+abstract class PerformanceTest extends KernelTestCase
+{
+    use PerformanceTrait;
+}
+```
+
+**Example - Execution Time Assertions:**
+
+```php
+final class ApiPerformanceTest extends PerformanceTest
+{
+    public function testEndpointResponseTime(): void
+    {
+        // Assert the operation completes in less than 100ms
+        $this->assertRunsInLessThan(
+            fn() => $this->client->request('GET', '/api/users'),
+            100
+        );
+    }
+
+    public function testOptimizedQueryIsFaster(): void
+    {
+        // First call sets the baseline
+        $this->assertRunsInLessThan(
+            fn() => $this->repository->findAllSlow(),
+            500
+        );
+
+        // Assert optimized version is faster than the previous call
+        $this->assertRunsFasterThanPreviousInvocation(
+            fn() => $this->repository->findAllOptimized()
+        );
+    }
+}
+```
+
+**Example - Memory Usage Assertions:**
+
+```php
+final class MemoryPerformanceTest extends PerformanceTest
+{
+    public function testDataProcessingMemoryLimit(): void
+    {
+        // Assert the operation uses less than 50 MB
+        $this->assertUsesLessMemoryThan(
+            fn() => $this->processor->processLargeDataset(),
+            50
+        );
+    }
+
+    public function testStreamingUsesLessMemory(): void
+    {
+        // First call sets the baseline (loading all into memory)
+        $this->assertUsesLessMemoryThan(
+            fn() => $this->importer->importAll($data),
+            100
+        );
+
+        // Assert streaming version uses less memory
+        $this->assertUsesLessMemoryThanPreviousInvocation(
+            fn() => $this->importer->importStreaming($data)
+        );
+    }
+}
+```
+
+**Available Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `assertRunsInLessThan(callable, int $ms)` | Assert callback runs in less than N milliseconds |
+| `assertRunsFasterThanPreviousInvocation(callable)` | Assert callback is faster than previous measured call |
+| `assertUsesLessMemoryThan(callable, float $mb)` | Assert callback uses less than N megabytes |
+| `assertUsesLessMemoryThanPreviousInvocation(callable)` | Assert callback uses less memory than previous measured call |
+
 ### run-if-modified.sh - Smart Command Caching
 
 A Bash script that executes commands only when files in a watched directory have been modified since the last successful execution.
