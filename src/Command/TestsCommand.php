@@ -59,7 +59,7 @@ class TestsCommand extends Command
             }
         }
 
-        $phpunitCmd = ['php', 'vendor/bin/phpunit'];
+        $phpunitCmd = ['php', '-d', 'memory_limit=-1', 'vendor/bin/phpunit'];
         $configFile = $this->resolvePhpunitConfig();
 
         if ($configFile !== null) {
