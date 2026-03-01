@@ -227,6 +227,314 @@ rm /tmp/run-if-modified-*.timestamp
 - `1`: Error (missing parameters or command failed)
 - Other: Returns the exit code from the executed command
 
+### Console Commands
+
+#### `tmp:tests` - Test Runner
+
+Runs `tests:warmup` (if defined in `composer.json`) and then executes PHPUnit. Provides colored output, re-run failed tests, and code coverage enforcement.
+
+**Usage:**
+
+```bash
+php bin/console tmp:tests
+php bin/console tmp:tests --failed
+php bin/console tmp:tests --coverage=80
+php bin/console tmp:tests --suite unit
+php bin/console tmp:tests --suite unit --suite integration
+php bin/console tmp:tests --suite unit --coverage=90
+```
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--failed` | Re-run only previously failed tests. Once they all pass, the defect list is cleared automatically. |
+| `--coverage=N` | Generate code coverage and fail if the line coverage percentage is below `N` (1-100). |
+| `--suite=NAME` | Run only the specified test suite(s). Can be repeated to run multiple suites. Maps to PHPUnit's `--testsuite` option. |
+
+All options can be combined. For example, `--suite unit --coverage=90` runs only the `unit` suite and enforces 90% coverage on it.
+
+**How `--failed` works:**
+
+PHPUnit 10+ stores test results in `.phpunit.cache/test-results` (JSON). The command reads this file, extracts defect names (stripping data-set suffixes for deduplication), and passes them as a `--filter` to PHPUnit. After a successful re-run, defects are cleared so the next `--failed` invocation reports "No previously failed tests found".
+
+**How `--coverage` works:**
+
+Passes `--coverage-clover` to PHPUnit, then parses the generated Clover XML to calculate line coverage (`coveredstatements / statements * 100`). The result is displayed and compared against the threshold.
+
+**How `--suite` works:**
+
+Passes `--testsuite` to PHPUnit with the suite name(s). When multiple suites are specified, they are joined with commas (e.g. `--testsuite unit,integration`).
+
+#### `tmp:tests:verify-setup` - Setup Verification
+
+Validates that the project is correctly configured for the test runner.
+
+**Usage:**
+
+```bash
+php bin/console tmp:tests:verify-setup
+```
+
+**Checks performed:**
+
+| Check | Requirement |
+|-------|-------------|
+| `composer.json` | File exists and contains valid JSON |
+| `tests:warmup` script | Defined in `composer.json` scripts |
+| `phpunit.xml.dist` | File exists and contains valid XML |
+| `cacheDirectory` attribute | Present on `<phpunit>` element (required for `--failed`) |
+| Test suites | All four required suites defined: `unit`, `integration`, `application`, `acceptance` |
+
+## PHPUnit Configuration & Best Practices
+
+### Reference Configuration
+
+The following `phpunit.xml.dist` satisfies all `tmp:tests:verify-setup` checks and follows PHPUnit 10+ best practices:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         cacheDirectory=".phpunit.cache"
+         executionOrder="depends,defects"
+         requireCoverageMetadata="true"
+         beStrictAboutCoverageMetadata="true"
+         beStrictAboutOutputDuringTests="true"
+         failOnRisky="true"
+         failOnWarning="true"
+         colors="true">
+
+    <testsuites>
+        <testsuite name="unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+        <testsuite name="application">
+            <directory>tests/Application</directory>
+        </testsuite>
+        <testsuite name="acceptance">
+            <directory>tests/Acceptance</directory>
+        </testsuite>
+    </testsuites>
+
+    <source>
+        <include>
+            <directory>src</directory>
+        </include>
+    </source>
+</phpunit>
+```
+
+### Configuration Explained
+
+| Attribute | Value | Why |
+|-----------|-------|-----|
+| `bootstrap` | `tests/bootstrap.php` | Load autoloader and set up test environment (env vars, error reporting). |
+| `cacheDirectory` | `.phpunit.cache` | Required for `--failed` flag. Stores test results and coverage cache between runs. Add to `.gitignore`. |
+| `executionOrder` | `depends,defects` | Run dependent tests in order and prioritize previously failing tests first. |
+| `requireCoverageMetadata` | `true` | Every test class must declare `#[CoversClass]` or `#[CoversNothing]`. Prevents accidental untested code from inflating coverage. |
+| `beStrictAboutCoverageMetadata` | `true` | Marks tests as risky if they execute code not listed in their coverage attributes. Forces intentional `#[UsesClass]` declarations. |
+| `beStrictAboutOutputDuringTests` | `true` | Tests that produce output (echo, print, var_dump) are flagged as risky. Keeps test output clean. |
+| `failOnRisky` | `true` | Risky tests (no assertions, output, coverage violations) cause the suite to fail. |
+| `failOnWarning` | `true` | PHPUnit warnings (deprecated APIs, configuration issues) cause the suite to fail. |
+| `colors` | `true` | Colored terminal output. Overridden by `--colors=always` when running via `tmp:tests`. |
+
+### Recommended Project Structure
+
+```
+project/
+├── phpunit.xml.dist          # Committed — shared config
+├── phpunit.xml               # Git-ignored — local overrides
+├── .phpunit.cache/           # Git-ignored — test result cache
+├── src/
+│   └── ...
+└── tests/
+    ├── bootstrap.php         # Autoloader + env setup
+    ├── Unit/                 # No dependencies, no I/O, no kernel
+    │   └── Service/
+    │       └── PricingServiceTest.php
+    ├── Integration/          # Database, filesystem, external services
+    │   └── Repository/
+    │       └── UserRepositoryTest.php
+    ├── Application/          # HTTP layer, full request/response cycle
+    │   └── Controller/
+    │       └── LoginControllerTest.php
+    └── Acceptance/           # End-to-end, browser, full stack
+        └── CheckoutFlowTest.php
+```
+
+### Test Suites — What Goes Where
+
+| Suite | Base class | Boots kernel | Uses DB | Speed |
+|-------|-----------|-------------|---------|-------|
+| `unit` | `TestCase` | No | No | ~ms |
+| `integration` | `KernelTestCase` | Yes | Yes | ~100ms |
+| `application` | `WebTestCase` | Yes | Yes | ~200ms |
+| `acceptance` | `WebTestCase` / Panther | Yes | Yes | ~seconds |
+
+**Unit tests** test a single class in isolation. Dependencies are mocked. No filesystem, no database, no network.
+
+**Integration tests** verify that components work together with real services from the container. Typically test repositories, message handlers, or services that depend on infrastructure.
+
+**Application tests** test HTTP endpoints through Symfony's test client. Assert status codes, response content, redirects, and security.
+
+**Acceptance tests** test complete user flows end-to-end. If using Symfony Panther, they run in a real browser.
+
+### Coverage Metadata Attributes
+
+With `requireCoverageMetadata="true"`, every test class must declare what it covers:
+
+```php
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\UsesClass;
+
+#[CoversClass(PricingService::class)]      // This test covers PricingService
+#[UsesClass(Money::class)]                 // PricingService uses Money (not tested here)
+#[UsesClass(TaxCalculator::class)]         // PricingService uses TaxCalculator (not tested here)
+class PricingServiceTest extends TestCase
+{
+    // ...
+}
+```
+
+If a test is not meant to contribute to coverage (e.g. smoke tests):
+
+```php
+use PHPUnit\Framework\Attributes\CoversNothing;
+
+#[CoversNothing]
+class SmokeTest extends WebTestCase
+{
+    // ...
+}
+```
+
+### Bootstrap File
+
+A minimal `tests/bootstrap.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+use Symfony\Component\Dotenv\Dotenv;
+
+require dirname(__DIR__) . '/vendor/autoload.php';
+
+if (file_exists(dirname(__DIR__) . '/config/bootstrap.php')) {
+    require dirname(__DIR__) . '/config/bootstrap.php';
+} elseif (method_exists(Dotenv::class, 'bootEnv')) {
+    (new Dotenv())->bootEnv(dirname(__DIR__) . '/.env');
+}
+```
+
+### Composer Scripts
+
+Recommended `composer.json` scripts section:
+
+```json
+{
+    "scripts": {
+        "tests:warmup": [
+            "APP_ENV=test php bin/console cache:warmup",
+            "APP_ENV=test php bin/console doctrine:migrations:migrate --no-interaction",
+            "APP_ENV=test php bin/console doctrine:fixtures:load --no-interaction"
+        ]
+    }
+}
+```
+
+The `tests:warmup` script is automatically executed by `tmp:tests` before running PHPUnit. Use `run-if-modified.sh` for expensive steps that don't need to run every time.
+
+### .gitignore Entries
+
+```gitignore
+# PHPUnit
+phpunit.xml
+.phpunit.cache/
+.coverage/
+```
+
+Always commit `phpunit.xml.dist`. Never commit `phpunit.xml` — it is for local overrides only (e.g. running a single suite, disabling coverage strictness during development).
+
+### Coverage Prerequisites
+
+To use `--coverage`, your PHP installation needs a coverage driver:
+
+**PCOV (recommended — fast, low overhead):**
+
+```bash
+# Debian/Ubuntu
+sudo apt install php-pcov
+
+# Docker (Debian-based)
+pecl install pcov && docker-php-ext-enable pcov
+
+# Alpine (Docker)
+apk add --no-cache $PHPIZE_DEPS && pecl install pcov && docker-php-ext-enable pcov
+```
+
+**Xdebug (slower, but also provides step-debugging and profiling):**
+
+```bash
+# Debian/Ubuntu
+sudo apt install php-xdebug
+
+# Docker (Debian-based)
+pecl install xdebug && docker-php-ext-enable xdebug
+```
+
+When using Xdebug, set the mode to `coverage`:
+
+```ini
+; php.ini
+xdebug.mode=coverage
+```
+
+Or via environment variable:
+
+```bash
+XDEBUG_MODE=coverage php bin/console tmp:tests --coverage=80
+```
+
+**Which driver to choose:**
+
+| | PCOV | Xdebug |
+|-|------|--------|
+| Speed | ~2x faster | Slower due to instrumentation |
+| Debugging | No | Yes (breakpoints, step-through) |
+| Profiling | No | Yes (cachegrind output) |
+| Recommendation | CI pipelines, daily development | When you also need a debugger |
+
+Do not enable both simultaneously. If Xdebug is installed for debugging, use `XDEBUG_MODE=off` during normal test runs and `XDEBUG_MODE=coverage` only when generating coverage.
+
+### Coverage Targets
+
+Suggested minimum coverage thresholds per suite:
+
+| Suite | Target | Rationale |
+|-------|--------|-----------|
+| `unit` | 80-90% | Core business logic should be well-covered |
+| `integration` | 60-70% | Infrastructure glue code; some paths are hard to test |
+| All suites combined | 70-80% | Overall project health metric |
+
+Example CI usage:
+
+```bash
+# Enforce 80% on unit tests only
+php bin/console tmp:tests --suite unit --coverage=80
+
+# Enforce 70% overall
+php bin/console tmp:tests --coverage=70
+```
+
+The `<source>` block in `phpunit.xml.dist` controls which directories are included in coverage analysis. Only include `src/` — never include `tests/`, `vendor/`, or `config/`.
+
 ## Installation
 
 ```bash

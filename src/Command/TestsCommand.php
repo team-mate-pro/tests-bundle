@@ -11,6 +11,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Process\Process;
+use stdClass;
 use TeamMatePro\TestsBundle\ComposerFileReader;
 
 #[AsCommand(
@@ -28,7 +29,10 @@ class TestsCommand extends Command
 
     protected function configure(): void
     {
-        $this->addOption('failed', null, InputOption::VALUE_NONE, 'Run only previously failed tests');
+        $this
+            ->addOption('failed', null, InputOption::VALUE_NONE, 'Run only previously failed tests')
+            ->addOption('coverage', null, InputOption::VALUE_REQUIRED, 'Minimum coverage percentage (1-100)')
+            ->addOption('suite', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Test suite(s) to run (e.g. --suite unit --suite integration)');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -65,6 +69,24 @@ class TestsCommand extends Command
             $phpunitCmd[] = '--colors=always';
         }
 
+        /** @var string|null $coverageOption */
+        $coverageOption = $input->getOption('coverage');
+        $coverageThreshold = $coverageOption !== null ? (int) $coverageOption : null;
+        $cloverFile = $this->projectDir . '/.phpunit.cache/coverage.xml';
+
+        if ($coverageThreshold !== null) {
+            $phpunitCmd[] = '--coverage-clover';
+            $phpunitCmd[] = $cloverFile;
+        }
+
+        /** @var list<string> $suites */
+        $suites = $input->getOption('suite');
+
+        if ($suites !== []) {
+            $phpunitCmd[] = '--testsuite';
+            $phpunitCmd[] = implode(',', $suites);
+        }
+
         if ($input->getOption('failed')) {
             $failedTests = $this->getFailedTests();
 
@@ -92,7 +114,40 @@ class TestsCommand extends Command
             $this->clearDefects();
         }
 
-        return $exitCode === 0 ? Command::SUCCESS : Command::FAILURE;
+        if ($exitCode !== 0) {
+            return Command::FAILURE;
+        }
+
+        if ($coverageThreshold !== null) {
+            $coverage = $this->parseCoverageFromClover($cloverFile);
+
+            if ($coverage === null) {
+                $io->error('Could not parse coverage report.');
+
+                return Command::FAILURE;
+            }
+
+            $io->newLine();
+            $io->text(sprintf('Code coverage: <info>%.2f%%</info>', $coverage));
+
+            if ($coverage < $coverageThreshold) {
+                $io->error(sprintf(
+                    'Code coverage %.2f%% is below the required %d%% threshold.',
+                    $coverage,
+                    $coverageThreshold,
+                ));
+
+                return Command::FAILURE;
+            }
+
+            $io->success(sprintf(
+                'Code coverage %.2f%% meets the required %d%% threshold.',
+                $coverage,
+                $coverageThreshold,
+            ));
+        }
+
+        return Command::SUCCESS;
     }
 
     private function resolvePhpunitConfig(): ?string
@@ -163,8 +218,36 @@ class TestsCommand extends Command
             return;
         }
 
-        $data['defects'] = new \stdClass();
+        $data['defects'] = new stdClass();
         file_put_contents($cacheFile, json_encode($data));
+    }
+
+    private function parseCoverageFromClover(string $cloverFile): ?float
+    {
+        if (!file_exists($cloverFile)) {
+            return null;
+        }
+
+        $xml = @simplexml_load_file($cloverFile);
+
+        if ($xml === false) {
+            return null;
+        }
+
+        $metrics = $xml->project->metrics ?? null;
+
+        if ($metrics === null) {
+            return null;
+        }
+
+        $statements = (int) ($metrics['statements'] ?? 0);
+        $coveredStatements = (int) ($metrics['coveredstatements'] ?? 0);
+
+        if ($statements === 0) {
+            return 100.0;
+        }
+
+        return ($coveredStatements / $statements) * 100;
     }
 
     /** @param list<string> $command */

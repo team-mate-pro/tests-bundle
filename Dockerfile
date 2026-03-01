@@ -5,6 +5,8 @@ RUN apt-get update && apt-get install -y \
     unzip \
     libxml2-dev \
     && docker-php-ext-install simplexml \
+    && pecl install pcov \
+    && docker-php-ext-enable pcov \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer

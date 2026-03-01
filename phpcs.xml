@@ -24,4 +24,7 @@
     <file>src/</file>
     <file>tests/</file>
 
+    <!-- Exclude test fixture vendor directory -->
+    <exclude-pattern>*/SymfonyProject/vendor/*</exclude-pattern>
+
 </ruleset>

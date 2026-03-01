@@ -5,14 +5,18 @@ declare(strict_types=1);
 namespace TeamMatePro\TestsBundle\Tests\Unit\Command;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\UsesClass;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 use TeamMatePro\TestsBundle\Command\VerifySetupCommand;
 use TeamMatePro\TestsBundle\ComposerFileReader;
+use TeamMatePro\TestsBundle\TeamMateProTestsBundle;
 
 #[CoversClass(VerifySetupCommand::class)]
+#[UsesClass(ComposerFileReader::class)]
+#[UsesClass(TeamMateProTestsBundle::class)]
 class VerifySetupCommandTest extends KernelTestCase
 {
     private const FIXTURES_DIR = __DIR__ . '/../../_Data/SymfonyProject';

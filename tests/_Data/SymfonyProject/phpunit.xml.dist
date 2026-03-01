@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<phpunit cacheDirectory=".phpunit.cache">
+<phpunit cacheDirectory=".phpunit.cache"
+         bootstrap="tests/bootstrap.php"
+         executionOrder="depends,defects"
+         colors="true">
     <testsuites>
         <testsuite name="unit">
             <directory>tests/Unit</directory>
@@ -14,4 +17,10 @@
             <directory>tests/Acceptance</directory>
         </testsuite>
     </testsuites>
+
+    <source>
+        <include>
+            <directory>src</directory>
+        </include>
+    </source>
 </phpunit>
