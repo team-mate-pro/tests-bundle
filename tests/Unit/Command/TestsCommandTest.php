@@ -191,7 +191,7 @@ class TestsCommandTest extends TestCase
         $phpunitCmd = $command->executedCommands[count($command->executedCommands) - 1];
         $cloverIndex = array_search('--coverage-clover', $phpunitCmd, true);
         self::assertIsInt($cloverIndex);
-        self::assertStringEndsWith('/.phpunit.cache/coverage.xml', $phpunitCmd[$cloverIndex + 1]);
+        self::assertStringContainsString('phpunit-coverage-', $phpunitCmd[$cloverIndex + 1]);
     }
 
     public function testCoverageNotCheckedWithoutOption(): void

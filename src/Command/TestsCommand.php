@@ -74,7 +74,7 @@ class TestsCommand extends Command
         /** @var string|null $coverageOption */
         $coverageOption = $input->getOption('coverage');
         $coverageThreshold = $coverageOption !== null ? (int) $coverageOption : null;
-        $cloverFile = $this->projectDir . '/.phpunit.cache/coverage.xml';
+        $cloverFile = sys_get_temp_dir() . '/phpunit-coverage-' . uniqid() . '.xml';
 
         if ($coverageThreshold !== null) {
             $phpunitCmd[] = '--coverage-clover';
