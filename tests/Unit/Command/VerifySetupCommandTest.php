@@ -104,6 +104,18 @@ class VerifySetupCommandTest extends KernelTestCase
         self::assertStringContainsString('acceptance', $display);
     }
 
+    public function testMissingCacheDirectory(): void
+    {
+        $this->tmpDir = $this->createTmpDir();
+        copy(self::FIXTURES_DIR . '/composer.json', $this->tmpDir . '/composer.json');
+        copy(self::FIXTURES_DIR . '/phpunit_no_cache.xml.dist', $this->tmpDir . '/phpunit.xml.dist');
+
+        $tester = $this->executeWithProjectDir($this->tmpDir);
+
+        self::assertSame(Command::FAILURE, $tester->getStatusCode());
+        self::assertStringContainsString('cacheDirectory', $tester->getDisplay());
+    }
+
     public function testMultipleErrors(): void
     {
         $this->tmpDir = $this->createTmpDir();

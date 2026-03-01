@@ -43,7 +43,7 @@ class TestsCommandTest extends TestCase
     {
         $cacheDir = $this->tmpDir . '/.phpunit.cache';
         mkdir($cacheDir, 0777, true);
-        file_put_contents($cacheDir . '/test-results', serialize([
+        file_put_contents($cacheDir . '/test-results', json_encode([
             'defects' => [
                 'App\\Tests\\FooTest::testBar' => 1,
                 'App\\Tests\\BazTest::testQux' => 1,
@@ -73,7 +73,7 @@ class TestsCommandTest extends TestCase
     {
         $cacheDir = $this->tmpDir . '/.phpunit.cache';
         mkdir($cacheDir, 0777, true);
-        file_put_contents($cacheDir . '/test-results', serialize([
+        file_put_contents($cacheDir . '/test-results', json_encode([
             'defects' => [
                 'App\\Tests\\FooTest::testBar with data set #0' => 1,
                 'App\\Tests\\FooTest::testBar with data set #1' => 1,

@@ -9,3 +9,6 @@ services:
       - .:/app
     environment:
       - APP_ENV=test
+    entrypoint: bash -c "composer install --no-interaction --quiet 2>/dev/null; exec bash"
+    stdin_open: true
+    tty: true

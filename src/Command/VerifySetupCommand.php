@@ -87,6 +87,12 @@ class VerifySetupCommand extends Command
             return;
         }
 
+        $cacheDirectory = (string) ($xml['cacheDirectory'] ?? '');
+
+        if ($cacheDirectory === '') {
+            $errors[] = ['phpunit.xml.dist', 'Missing "cacheDirectory" attribute (required for --failed support)'];
+        }
+
         $suites = [];
 
         foreach ($xml->testsuites->testsuite ?? [] as $testsuite) {

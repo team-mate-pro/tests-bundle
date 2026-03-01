@@ -35,10 +35,18 @@ class TestsCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
+        $decorated = $output->isDecorated();
+
         if ($this->composerFileReader->hasScript('tests:warmup')) {
             $io->section('Running tests:warmup');
 
-            if ($this->runProcess(['composer', 'run', 'tests:warmup'], $output) !== 0) {
+            $warmupCmd = ['composer', 'run', 'tests:warmup'];
+
+            if ($decorated) {
+                $warmupCmd[] = '--ansi';
+            }
+
+            if ($this->runProcess($warmupCmd, $output) !== 0) {
                 $io->error('tests:warmup failed.');
 
                 return Command::FAILURE;
@@ -51,6 +59,10 @@ class TestsCommand extends Command
         if ($configFile !== null) {
             $phpunitCmd[] = '-c';
             $phpunitCmd[] = $configFile;
+        }
+
+        if ($decorated) {
+            $phpunitCmd[] = '--colors=always';
         }
 
         if ($input->getOption('failed')) {
@@ -75,6 +87,10 @@ class TestsCommand extends Command
         $io->section('Running PHPUnit');
 
         $exitCode = $this->runProcess($phpunitCmd, $output);
+
+        if ($exitCode === 0 && $input->getOption('failed')) {
+            $this->clearDefects();
+        }
 
         return $exitCode === 0 ? Command::SUCCESS : Command::FAILURE;
     }
@@ -107,7 +123,7 @@ class TestsCommand extends Command
             return [];
         }
 
-        $data = @unserialize($content);
+        $data = json_decode($content, true);
 
         if (!is_array($data) || !isset($data['defects']) || !is_array($data['defects'])) {
             return [];
@@ -125,6 +141,30 @@ class TestsCommand extends Command
         }
 
         return array_values(array_unique($tests));
+    }
+
+    private function clearDefects(): void
+    {
+        $cacheFile = $this->projectDir . '/.phpunit.cache/test-results';
+
+        if (!file_exists($cacheFile)) {
+            return;
+        }
+
+        $content = file_get_contents($cacheFile);
+
+        if ($content === false) {
+            return;
+        }
+
+        $data = json_decode($content, true);
+
+        if (!is_array($data)) {
+            return;
+        }
+
+        $data['defects'] = new \stdClass();
+        file_put_contents($cacheFile, json_encode($data));
     }
 
     /** @param list<string> $command */
