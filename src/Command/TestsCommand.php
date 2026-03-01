@@ -32,7 +32,9 @@ class TestsCommand extends Command
         $this
             ->addOption('failed', null, InputOption::VALUE_NONE, 'Run only previously failed tests')
             ->addOption('coverage', null, InputOption::VALUE_REQUIRED, 'Minimum coverage percentage (1-100)')
-            ->addOption('suite', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Test suite(s) to run (e.g. --suite unit --suite integration)');
+            ->addOption('suite', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Test suite(s) to run (e.g. --suite unit --suite integration)')
+            ->addOption('group', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Test group(s) to include (e.g. --group fast --group critical)')
+            ->addOption('exclude-group', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Test group(s) to exclude (e.g. --exclude-group slow --exclude-group flaky)');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -85,6 +87,22 @@ class TestsCommand extends Command
         if ($suites !== []) {
             $phpunitCmd[] = '--testsuite';
             $phpunitCmd[] = implode(',', $suites);
+        }
+
+        /** @var list<string> $groups */
+        $groups = $input->getOption('group');
+
+        if ($groups !== []) {
+            $phpunitCmd[] = '--group';
+            $phpunitCmd[] = implode(',', $groups);
+        }
+
+        /** @var list<string> $excludeGroups */
+        $excludeGroups = $input->getOption('exclude-group');
+
+        if ($excludeGroups !== []) {
+            $phpunitCmd[] = '--exclude-group';
+            $phpunitCmd[] = implode(',', $excludeGroups);
         }
 
         if ($input->getOption('failed')) {

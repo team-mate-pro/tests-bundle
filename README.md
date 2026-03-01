@@ -242,6 +242,9 @@ php bin/console tmp:tests --coverage=80
 php bin/console tmp:tests --suite unit
 php bin/console tmp:tests --suite unit --suite integration
 php bin/console tmp:tests --suite unit --coverage=90
+php bin/console tmp:tests --group fast
+php bin/console tmp:tests --group fast --exclude-group flaky
+php bin/console tmp:tests --suite integration --group fast --exclude-group flaky
 ```
 
 **Options:**
@@ -251,8 +254,10 @@ php bin/console tmp:tests --suite unit --coverage=90
 | `--failed` | Re-run only previously failed tests. Once they all pass, the defect list is cleared automatically. |
 | `--coverage=N` | Generate code coverage and fail if the line coverage percentage is below `N` (1-100). |
 | `--suite=NAME` | Run only the specified test suite(s). Can be repeated to run multiple suites. Maps to PHPUnit's `--testsuite` option. |
+| `--group=NAME` | Run only tests in the specified group(s). Can be repeated. Maps to PHPUnit's `--group` option. |
+| `--exclude-group=NAME` | Exclude tests in the specified group(s). Can be repeated. Maps to PHPUnit's `--exclude-group` option. |
 
-All options can be combined. For example, `--suite unit --coverage=90` runs only the `unit` suite and enforces 90% coverage on it.
+All options can be combined. For example, `--suite integration --group fast --exclude-group flaky` runs only the `integration` suite, includes only tests in the `fast` group, and excludes tests in the `flaky` group.
 
 **How `--failed` works:**
 
@@ -265,6 +270,19 @@ Passes `--coverage-clover` to PHPUnit, then parses the generated Clover XML to c
 **How `--suite` works:**
 
 Passes `--testsuite` to PHPUnit with the suite name(s). When multiple suites are specified, they are joined with commas (e.g. `--testsuite unit,integration`).
+
+**How `--group` and `--exclude-group` work:**
+
+Map directly to PHPUnit's `--group` and `--exclude-group` options. Groups are defined on test classes or methods using the `#[Group]` attribute:
+
+```php
+use PHPUnit\Framework\Attributes\Group;
+
+#[Group('fast')]
+class PricingServiceTest extends TestCase { /* ... */ }
+```
+
+When multiple groups are specified, they are joined with commas (e.g. `--group fast,critical`). This is useful for running subsets of a suite — for example, running only fast integration tests in CI while excluding known flaky ones.
 
 #### `tmp:tests:verify-setup` - Setup Verification
 
@@ -450,6 +468,20 @@ Recommended `composer.json` scripts section:
 ```
 
 The `tests:warmup` script is automatically executed by `tmp:tests` before running PHPUnit. Use `run-if-modified.sh` for expensive steps that don't need to run every time.
+
+You can also create specialized scripts using groups:
+
+```json
+{
+    "scripts": {
+        "tests": "APP_ENV=test php bin/console tmp:tests",
+        "tests:unit": "APP_ENV=test php bin/console tmp:tests --suite unit",
+        "tests:integration": "APP_ENV=test php bin/console tmp:tests --suite integration",
+        "tests:integration:fast": "APP_ENV=test php bin/console tmp:tests --suite integration --group fast --exclude-group flaky",
+        "tests:coverage": "APP_ENV=test php bin/console tmp:tests --coverage=70"
+    }
+}
+```
 
 ### .gitignore Entries
 

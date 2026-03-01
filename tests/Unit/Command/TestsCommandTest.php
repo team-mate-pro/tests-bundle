@@ -272,6 +272,111 @@ class TestsCommandTest extends TestCase
         self::assertStringContainsString('90.00%', $tester->getDisplay());
     }
 
+    public function testGroupPassesSingleGroupToPhpunit(): void
+    {
+        $command = $this->createTestableCommand(hasWarmup: false);
+        $tester = new CommandTester($command);
+
+        $tester->execute(['--group' => ['fast']]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        $phpunitCmd = $command->executedCommands[count($command->executedCommands) - 1];
+        $groupIndex = array_search('--group', $phpunitCmd, true);
+        self::assertIsInt($groupIndex);
+        self::assertSame('fast', $phpunitCmd[$groupIndex + 1]);
+    }
+
+    public function testGroupPassesMultipleGroupsToPhpunit(): void
+    {
+        $command = $this->createTestableCommand(hasWarmup: false);
+        $tester = new CommandTester($command);
+
+        $tester->execute(['--group' => ['fast', 'critical']]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        $phpunitCmd = $command->executedCommands[count($command->executedCommands) - 1];
+        $groupIndex = array_search('--group', $phpunitCmd, true);
+        self::assertIsInt($groupIndex);
+        self::assertSame('fast,critical', $phpunitCmd[$groupIndex + 1]);
+    }
+
+    public function testGroupNotPassedWithoutOption(): void
+    {
+        $command = $this->createTestableCommand(hasWarmup: false);
+        $tester = new CommandTester($command);
+
+        $tester->execute([]);
+
+        $phpunitCmd = $command->executedCommands[count($command->executedCommands) - 1];
+        self::assertNotContains('--group', $phpunitCmd);
+    }
+
+    public function testExcludeGroupPassesSingleGroupToPhpunit(): void
+    {
+        $command = $this->createTestableCommand(hasWarmup: false);
+        $tester = new CommandTester($command);
+
+        $tester->execute(['--exclude-group' => ['flaky']]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        $phpunitCmd = $command->executedCommands[count($command->executedCommands) - 1];
+        $excludeIndex = array_search('--exclude-group', $phpunitCmd, true);
+        self::assertIsInt($excludeIndex);
+        self::assertSame('flaky', $phpunitCmd[$excludeIndex + 1]);
+    }
+
+    public function testExcludeGroupPassesMultipleGroupsToPhpunit(): void
+    {
+        $command = $this->createTestableCommand(hasWarmup: false);
+        $tester = new CommandTester($command);
+
+        $tester->execute(['--exclude-group' => ['flaky', 'slow']]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        $phpunitCmd = $command->executedCommands[count($command->executedCommands) - 1];
+        $excludeIndex = array_search('--exclude-group', $phpunitCmd, true);
+        self::assertIsInt($excludeIndex);
+        self::assertSame('flaky,slow', $phpunitCmd[$excludeIndex + 1]);
+    }
+
+    public function testExcludeGroupNotPassedWithoutOption(): void
+    {
+        $command = $this->createTestableCommand(hasWarmup: false);
+        $tester = new CommandTester($command);
+
+        $tester->execute([]);
+
+        $phpunitCmd = $command->executedCommands[count($command->executedCommands) - 1];
+        self::assertNotContains('--exclude-group', $phpunitCmd);
+    }
+
+    public function testGroupAndExcludeGroupCombined(): void
+    {
+        $command = $this->createTestableCommand(hasWarmup: false);
+        $tester = new CommandTester($command);
+
+        $tester->execute([
+            '--suite' => ['integration'],
+            '--group' => ['fast'],
+            '--exclude-group' => ['flaky'],
+        ]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        $phpunitCmd = $command->executedCommands[count($command->executedCommands) - 1];
+
+        $suiteIndex = array_search('--testsuite', $phpunitCmd, true);
+        self::assertIsInt($suiteIndex);
+        self::assertSame('integration', $phpunitCmd[$suiteIndex + 1]);
+
+        $groupIndex = array_search('--group', $phpunitCmd, true);
+        self::assertIsInt($groupIndex);
+        self::assertSame('fast', $phpunitCmd[$groupIndex + 1]);
+
+        $excludeIndex = array_search('--exclude-group', $phpunitCmd, true);
+        self::assertIsInt($excludeIndex);
+        self::assertSame('flaky', $phpunitCmd[$excludeIndex + 1]);
+    }
+
     private function buildCloverXml(int $coveredStatements, int $totalStatements): string
     {
         return <<<XML
