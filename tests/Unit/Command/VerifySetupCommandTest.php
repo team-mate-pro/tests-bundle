@@ -81,7 +81,7 @@ class VerifySetupCommandTest extends KernelTestCase
         self::assertStringContainsString('tests:warmup', $tester->getDisplay());
     }
 
-    public function testMissingPhpunitXmlDist(): void
+    public function testMissingPhpunitConfig(): void
     {
         $this->tmpDir = $this->createTmpDir();
         copy(self::FIXTURES_DIR . '/composer.json', $this->tmpDir . '/composer.json');
@@ -89,8 +89,38 @@ class VerifySetupCommandTest extends KernelTestCase
         $tester = $this->executeWithProjectDir($this->tmpDir);
 
         self::assertSame(Command::FAILURE, $tester->getStatusCode());
-        self::assertStringContainsString('phpunit.xml.dist', $tester->getDisplay());
-        self::assertStringContainsString('not found', $tester->getDisplay());
+        self::assertStringContainsString('phpunit.xml[.dist]', $tester->getDisplay());
+        self::assertStringContainsString('Neither phpunit.xml nor phpunit.xml.dist found', $tester->getDisplay());
+    }
+
+    public function testPassesWithPhpunitXmlOnly(): void
+    {
+        $this->tmpDir = $this->createTmpDir();
+        copy(self::FIXTURES_DIR . '/composer.json', $this->tmpDir . '/composer.json');
+        copy(self::FIXTURES_DIR . '/phpunit.xml', $this->tmpDir . '/phpunit.xml');
+
+        $tester = $this->executeWithProjectDir($this->tmpDir);
+
+        self::assertSame(Command::SUCCESS, $tester->getStatusCode());
+        self::assertStringContainsString('correctly configured', $tester->getDisplay());
+    }
+
+    public function testPhpunitXmlTakesPrecedenceOverDist(): void
+    {
+        // Given: a project with both phpunit.xml (incomplete) and phpunit.xml.dist (complete)
+        $this->tmpDir = $this->createTmpDir();
+        copy(self::FIXTURES_DIR . '/composer.json', $this->tmpDir . '/composer.json');
+        copy(self::FIXTURES_DIR . '/phpunit_incomplete.xml.dist', $this->tmpDir . '/phpunit.xml'); // incomplete as phpunit.xml
+        copy(self::FIXTURES_DIR . '/phpunit.xml.dist', $this->tmpDir . '/phpunit.xml.dist'); // complete as phpunit.xml.dist
+
+        // When: we verify setup
+        $tester = $this->executeWithProjectDir($this->tmpDir);
+
+        // Then: phpunit.xml is used (and fails because it's incomplete), not phpunit.xml.dist
+        self::assertSame(Command::FAILURE, $tester->getStatusCode());
+        $display = $tester->getDisplay();
+        self::assertStringContainsString('phpunit.xml', $display);
+        self::assertStringNotContainsString('phpunit.xml.dist', $display);
     }
 
     public function testIncompleteSuites(): void

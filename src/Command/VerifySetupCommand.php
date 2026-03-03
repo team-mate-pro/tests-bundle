@@ -71,18 +71,20 @@ class VerifySetupCommand extends Command
     /** @param list<array{string, string}> $errors */
     private function verifyPhpunitConfig(array &$errors): void
     {
-        $phpunitPath = $this->projectDir . '/phpunit.xml.dist';
+        $phpunitPath = $this->resolvePhpunitConfigPath();
 
-        if (!file_exists($phpunitPath)) {
-            $errors[] = ['phpunit.xml.dist', 'File not found in project root'];
+        if ($phpunitPath === null) {
+            $errors[] = ['phpunit.xml[.dist]', 'Neither phpunit.xml nor phpunit.xml.dist found in project root'];
 
             return;
         }
 
+        $configFileName = basename($phpunitPath);
+
         $xml = @simplexml_load_file($phpunitPath);
 
         if ($xml === false) {
-            $errors[] = ['phpunit.xml.dist', 'Invalid XML'];
+            $errors[] = [$configFileName, 'Invalid XML'];
 
             return;
         }
@@ -90,7 +92,7 @@ class VerifySetupCommand extends Command
         $cacheDirectory = (string) ($xml['cacheDirectory'] ?? '');
 
         if ($cacheDirectory === '') {
-            $errors[] = ['phpunit.xml.dist', 'Missing "cacheDirectory" attribute (required for --failed support)'];
+            $errors[] = [$configFileName, 'Missing "cacheDirectory" attribute (required for --failed support)'];
         }
 
         $suites = [];
@@ -105,8 +107,29 @@ class VerifySetupCommand extends Command
 
         foreach (self::REQUIRED_SUITES as $required) {
             if (!in_array($required, $suites, true)) {
-                $errors[] = ['phpunit.xml.dist', sprintf('Missing "%s" test suite', $required)];
+                $errors[] = [$configFileName, sprintf('Missing "%s" test suite', $required)];
             }
         }
+    }
+
+    /**
+     * Resolves PHPUnit config path following PHPUnit convention:
+     * phpunit.xml takes precedence over phpunit.xml.dist
+     */
+    private function resolvePhpunitConfigPath(): ?string
+    {
+        $phpunitXml = $this->projectDir . '/phpunit.xml';
+
+        if (file_exists($phpunitXml)) {
+            return $phpunitXml;
+        }
+
+        $phpunitXmlDist = $this->projectDir . '/phpunit.xml.dist';
+
+        if (file_exists($phpunitXmlDist)) {
+            return $phpunitXmlDist;
+        }
+
+        return null;
     }
 }
