@@ -74,9 +74,13 @@ class TestsCommand extends Command
         /** @var string|null $coverageOption */
         $coverageOption = $input->getOption('coverage');
         $coverageThreshold = $coverageOption !== null ? (int) $coverageOption : null;
-        $cloverFile = sys_get_temp_dir() . '/phpunit-coverage-' . uniqid() . '.xml';
 
-        if ($coverageThreshold !== null) {
+        // Try to read clover path from phpunit config, fallback to temp file
+        $cloverFileFromConfig = $configFile !== null ? $this->getCloverOutputPathFromConfig($configFile) : null;
+        $cloverFile = $cloverFileFromConfig ?? sys_get_temp_dir() . '/phpunit-coverage-' . uniqid() . '.xml';
+
+        // Only add --coverage-clover if not configured in phpunit.xml
+        if ($coverageThreshold !== null && $cloverFileFromConfig === null) {
             $phpunitCmd[] = '--coverage-clover';
             $phpunitCmd[] = $cloverFile;
         }
@@ -179,6 +183,38 @@ class TestsCommand extends Command
         }
 
         return null;
+    }
+
+    /**
+     * Reads the clover output path from phpunit.xml configuration.
+     * Looks for: <coverage><report><clover outputFile="..."/></report></coverage>
+     */
+    private function getCloverOutputPathFromConfig(string $configFile): ?string
+    {
+        $fullPath = $this->projectDir . '/' . $configFile;
+
+        if (!file_exists($fullPath)) {
+            return null;
+        }
+
+        $xml = @simplexml_load_file($fullPath);
+
+        if ($xml === false) {
+            return null;
+        }
+
+        $cloverOutputFile = (string) ($xml->coverage->report->clover['outputFile'] ?? '');
+
+        if ($cloverOutputFile === '') {
+            return null;
+        }
+
+        // Return as absolute path if relative
+        if (!str_starts_with($cloverOutputFile, '/')) {
+            return $this->projectDir . '/' . $cloverOutputFile;
+        }
+
+        return $cloverOutputFile;
     }
 
     /** @return list<string> */

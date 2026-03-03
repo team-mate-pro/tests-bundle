@@ -33,8 +33,16 @@ class VerifySetupCommand extends Command
         /** @var list<array{string, string}> $errors */
         $errors = [];
 
+        /** @var list<array{string, string}> $warnings */
+        $warnings = [];
+
         $this->verifyComposerScripts($errors);
-        $this->verifyPhpunitConfig($errors);
+        $this->verifyPhpunitConfig($errors, $warnings);
+
+        if ($warnings !== []) {
+            $io->warning(sprintf('Found %d warning(s) in test setup:', count($warnings)));
+            $io->table(['Check', 'Warning'], $warnings);
+        }
 
         if ($errors !== []) {
             $io->error(sprintf('Found %d problem(s) in test setup:', count($errors)));
@@ -68,8 +76,11 @@ class VerifySetupCommand extends Command
         }
     }
 
-    /** @param list<array{string, string}> $errors */
-    private function verifyPhpunitConfig(array &$errors): void
+    /**
+     * @param list<array{string, string}> $errors
+     * @param list<array{string, string}> $warnings
+     */
+    private function verifyPhpunitConfig(array &$errors, array &$warnings): void
     {
         $phpunitPath = $this->resolvePhpunitConfigPath();
 
@@ -89,12 +100,20 @@ class VerifySetupCommand extends Command
             return;
         }
 
+        // Required attributes
         $cacheDirectory = (string) ($xml['cacheDirectory'] ?? '');
 
         if ($cacheDirectory === '') {
             $errors[] = [$configFileName, 'Missing "cacheDirectory" attribute (required for --failed support)'];
         }
 
+        // Recommended attributes
+        $this->checkRecommendedAttribute($xml, $configFileName, 'executionOrder', 'depends,defects', $warnings);
+        $this->checkRecommendedBoolAttribute($xml, $configFileName, 'failOnRisky', $warnings);
+        $this->checkRecommendedBoolAttribute($xml, $configFileName, 'failOnWarning', $warnings);
+        $this->checkRecommendedBoolAttribute($xml, $configFileName, 'beStrictAboutOutputDuringTests', $warnings);
+
+        // Required test suites
         $suites = [];
 
         foreach ($xml->testsuites->testsuite ?? [] as $testsuite) {
@@ -109,6 +128,35 @@ class VerifySetupCommand extends Command
             if (!in_array($required, $suites, true)) {
                 $errors[] = [$configFileName, sprintf('Missing "%s" test suite', $required)];
             }
+        }
+    }
+
+    /** @param list<array{string, string}> $warnings */
+    private function checkRecommendedAttribute(
+        \SimpleXMLElement $xml,
+        string $configFileName,
+        string $attribute,
+        string $expectedValue,
+        array &$warnings,
+    ): void {
+        $value = (string) ($xml[$attribute] ?? '');
+
+        if ($value !== $expectedValue) {
+            $warnings[] = [$configFileName, sprintf('Missing or incorrect %s="%s" (recommended)', $attribute, $expectedValue)];
+        }
+    }
+
+    /** @param list<array{string, string}> $warnings */
+    private function checkRecommendedBoolAttribute(
+        \SimpleXMLElement $xml,
+        string $configFileName,
+        string $attribute,
+        array &$warnings,
+    ): void {
+        $value = (string) ($xml[$attribute] ?? '');
+
+        if ($value !== 'true') {
+            $warnings[] = [$configFileName, sprintf('Missing or incorrect %s="true" (recommended)', $attribute)];
         }
     }
 

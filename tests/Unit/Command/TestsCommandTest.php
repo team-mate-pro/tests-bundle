@@ -180,7 +180,7 @@ class TestsCommandTest extends TestCase
         self::assertStringContainsString('below the required', $display);
     }
 
-    public function testCoverageAddsCloverArgToPhpunit(): void
+    public function testCoverageAddsCloverArgToPhpunitWhenNotInConfig(): void
     {
         $command = $this->createTestableCommand(hasWarmup: false);
         $command->cloverXmlContent = $this->buildCloverXml(100, 100);
@@ -192,6 +192,47 @@ class TestsCommandTest extends TestCase
         $cloverIndex = array_search('--coverage-clover', $phpunitCmd, true);
         self::assertIsInt($cloverIndex);
         self::assertStringContainsString('phpunit-coverage-', $phpunitCmd[$cloverIndex + 1]);
+    }
+
+    public function testCoverageUsesCloverPathFromConfig(): void
+    {
+        // Given: phpunit.xml with clover output configured
+        $cloverPath = $this->tmpDir . '/var/coverage/clover.xml';
+        $phpunitXml = $this->buildPhpunitXmlWithClover('var/coverage/clover.xml');
+        file_put_contents($this->tmpDir . '/phpunit.xml', $phpunitXml);
+
+        $command = $this->createTestableCommand(hasWarmup: false);
+        $command->cloverXmlContent = $this->buildCloverXml(85, 100);
+        $command->cloverPathFromConfig = $cloverPath;
+        $tester = new CommandTester($command);
+
+        // When: running with coverage
+        $tester->execute(['--coverage' => '80']);
+
+        // Then: coverage is read from config path and passes threshold
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertStringContainsString('85.00%', $tester->getDisplay());
+        self::assertStringContainsString('meets the required', $tester->getDisplay());
+    }
+
+    public function testCoverageDoesNotAddCloverArgWhenConfigured(): void
+    {
+        // Given: phpunit.xml with clover output configured
+        $cloverPath = $this->tmpDir . '/var/coverage/clover.xml';
+        $phpunitXml = $this->buildPhpunitXmlWithClover('var/coverage/clover.xml');
+        file_put_contents($this->tmpDir . '/phpunit.xml', $phpunitXml);
+
+        $command = $this->createTestableCommand(hasWarmup: false);
+        $command->cloverXmlContent = $this->buildCloverXml(100, 100);
+        $command->cloverPathFromConfig = $cloverPath;
+        $tester = new CommandTester($command);
+
+        // When: running with coverage
+        $tester->execute(['--coverage' => '80']);
+
+        // Then: --coverage-clover is NOT added to phpunit command
+        $phpunitCmd = $command->executedCommands[count($command->executedCommands) - 1];
+        self::assertNotContains('--coverage-clover', $phpunitCmd);
     }
 
     public function testCoverageNotCheckedWithoutOption(): void
@@ -386,6 +427,20 @@ class TestsCommandTest extends TestCase
                     <metrics statements="{$totalStatements}" coveredstatements="{$coveredStatements}" />
                 </project>
             </coverage>
+            XML;
+    }
+
+    private function buildPhpunitXmlWithClover(string $cloverOutputFile): string
+    {
+        return <<<XML
+            <?xml version="1.0" encoding="UTF-8"?>
+            <phpunit cacheDirectory=".phpunit.cache">
+                <coverage>
+                    <report>
+                        <clover outputFile="{$cloverOutputFile}"/>
+                    </report>
+                </coverage>
+            </phpunit>
             XML;
     }
 
