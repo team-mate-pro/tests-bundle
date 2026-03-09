@@ -1,6 +1,5 @@
 {
     "name": "test/symfony-project",
-    "version": "",
     "type": "project",
     "require": {
         "php": ">=8.2",
@@ -10,7 +9,8 @@
         "team-mate-pro/tests-bundle": "^1.0"
     },
     "require-dev": {
-        "phpunit/phpunit": "^10.0"
+        "phpunit/phpunit": "^10.0",
+        "brianium/paratest": "^7.4"
     },
     "autoload": {
         "psr-4": {
