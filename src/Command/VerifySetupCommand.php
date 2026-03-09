@@ -38,6 +38,7 @@ class VerifySetupCommand extends Command
 
         $this->verifyComposerScripts($errors);
         $this->verifyPhpunitConfig($errors, $warnings);
+        $this->verifyOptionalDependencies($warnings);
 
         if ($warnings !== []) {
             $io->warning(sprintf('Found %d warning(s) in test setup:', count($warnings)));
@@ -157,6 +158,16 @@ class VerifySetupCommand extends Command
 
         if ($value !== 'true') {
             $warnings[] = [$configFileName, sprintf('Missing or incorrect %s="true" (recommended)', $attribute)];
+        }
+    }
+
+    /** @param list<array{string, string}> $warnings */
+    private function verifyOptionalDependencies(array &$warnings): void
+    {
+        $paratestBin = $this->projectDir . '/vendor/bin/paratest';
+
+        if (!file_exists($paratestBin)) {
+            $warnings[] = ['paratest', 'Not installed. Install with: composer require --dev brianium/paratest (required for --parallel option)'];
         }
     }
 
