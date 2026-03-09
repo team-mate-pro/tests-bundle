@@ -245,6 +245,8 @@ php bin/console tmp:tests --suite unit --coverage=90
 php bin/console tmp:tests --group fast
 php bin/console tmp:tests --group fast --exclude-group flaky
 php bin/console tmp:tests --suite integration --group fast --exclude-group flaky
+php bin/console tmp:tests --parallel=4
+php bin/console tmp:tests --parallel=4 --suite integration
 ```
 
 **Options:**
@@ -256,6 +258,7 @@ php bin/console tmp:tests --suite integration --group fast --exclude-group flaky
 | `--suite=NAME` | Run only the specified test suite(s). Can be repeated to run multiple suites. Maps to PHPUnit's `--testsuite` option. |
 | `--group=NAME` | Run only tests in the specified group(s). Can be repeated. Maps to PHPUnit's `--group` option. |
 | `--exclude-group=NAME` | Exclude tests in the specified group(s). Can be repeated. Maps to PHPUnit's `--exclude-group` option. |
+| `--parallel=N` | Run tests in parallel using N processes. Requires ParaTest (see below). |
 
 All options can be combined. For example, `--suite integration --group fast --exclude-group flaky` runs only the `integration` suite, includes only tests in the `fast` group, and excludes tests in the `flaky` group.
 
@@ -283,6 +286,44 @@ class PricingServiceTest extends TestCase { /* ... */ }
 ```
 
 When multiple groups are specified, they are joined with commas (e.g. `--group fast,critical`). This is useful for running subsets of a suite — for example, running only fast integration tests in CI while excluding known flaky ones.
+
+**How `--parallel` works:**
+
+The `--parallel` option uses [ParaTest](https://github.com/paratestphp/paratest) to run tests in multiple processes simultaneously. ParaTest:
+
+1. Scans all test files and distributes them across N processes
+2. Runs each process with its own PHPUnit instance
+3. Aggregates results from all processes into a single report
+4. Merges coverage reports (when using `--coverage`)
+
+**Installing ParaTest:**
+
+ParaTest is not installed by default. Install it as a dev dependency:
+
+```bash
+composer require --dev brianium/paratest
+```
+
+**Performance comparison:**
+
+| Command | Processes | Time (example) |
+|---------|-----------|----------------|
+| `tmp:tests` | 1 | ~60s |
+| `tmp:tests --parallel=2` | 2 | ~32s |
+| `tmp:tests --parallel=4` | 4 | ~18s |
+| `tmp:tests --parallel=8` | 8 | ~12s |
+
+The optimal number of processes depends on your CPU cores and test characteristics (I/O-bound vs CPU-bound). Start with the number of CPU cores and adjust based on results.
+
+**Combining with other options:**
+
+```bash
+# Run integration tests in 4 parallel processes with coverage
+php bin/console tmp:tests --parallel=4 --suite integration --coverage=70
+
+# Run fast tests in parallel, excluding flaky ones
+php bin/console tmp:tests --parallel=4 --group fast --exclude-group flaky
+```
 
 #### `tmp:tests:verify-setup` - Setup Verification
 

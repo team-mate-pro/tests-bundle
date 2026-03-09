@@ -34,7 +34,8 @@ class TestsCommand extends Command
             ->addOption('coverage', null, InputOption::VALUE_REQUIRED, 'Minimum coverage percentage (1-100)')
             ->addOption('suite', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Test suite(s) to run (e.g. --suite unit --suite integration)')
             ->addOption('group', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Test group(s) to include (e.g. --group fast --group critical)')
-            ->addOption('exclude-group', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Test group(s) to exclude (e.g. --exclude-group slow --exclude-group flaky)');
+            ->addOption('exclude-group', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Test group(s) to exclude (e.g. --exclude-group slow --exclude-group flaky)')
+            ->addOption('parallel', null, InputOption::VALUE_REQUIRED, 'Run tests in parallel using N processes (requires paratest)');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -59,16 +60,36 @@ class TestsCommand extends Command
             }
         }
 
-        $phpunitCmd = ['php', '-d', 'memory_limit=-1', 'vendor/bin/phpunit'];
+        /** @var string|null $parallelOption */
+        $parallelOption = $input->getOption('parallel');
+        $parallelProcesses = $parallelOption !== null ? (int) $parallelOption : null;
+
+        if ($parallelProcesses !== null) {
+            $paratestBin = $this->projectDir . '/vendor/bin/paratest';
+
+            if (!file_exists($paratestBin)) {
+                $io->error([
+                    'ParaTest is not installed.',
+                    'Install it with: composer require --dev brianium/paratest',
+                ]);
+
+                return Command::FAILURE;
+            }
+
+            $testCmd = ['php', '-d', 'memory_limit=-1', 'vendor/bin/paratest', '-p', (string) $parallelProcesses];
+        } else {
+            $testCmd = ['php', '-d', 'memory_limit=-1', 'vendor/bin/phpunit'];
+        }
+
         $configFile = $this->resolvePhpunitConfig();
 
         if ($configFile !== null) {
-            $phpunitCmd[] = '-c';
-            $phpunitCmd[] = $configFile;
+            $testCmd[] = '-c';
+            $testCmd[] = $configFile;
         }
 
         if ($decorated) {
-            $phpunitCmd[] = '--colors=always';
+            $testCmd[] = $parallelProcesses !== null ? '--colors' : '--colors=always';
         }
 
         /** @var string|null $coverageOption */
@@ -81,32 +102,32 @@ class TestsCommand extends Command
 
         // Only add --coverage-clover if not configured in phpunit.xml
         if ($coverageThreshold !== null && $cloverFileFromConfig === null) {
-            $phpunitCmd[] = '--coverage-clover';
-            $phpunitCmd[] = $cloverFile;
+            $testCmd[] = '--coverage-clover';
+            $testCmd[] = $cloverFile;
         }
 
         /** @var list<string> $suites */
         $suites = $input->getOption('suite');
 
         if ($suites !== []) {
-            $phpunitCmd[] = '--testsuite';
-            $phpunitCmd[] = implode(',', $suites);
+            $testCmd[] = '--testsuite';
+            $testCmd[] = implode(',', $suites);
         }
 
         /** @var list<string> $groups */
         $groups = $input->getOption('group');
 
         if ($groups !== []) {
-            $phpunitCmd[] = '--group';
-            $phpunitCmd[] = implode(',', $groups);
+            $testCmd[] = '--group';
+            $testCmd[] = implode(',', $groups);
         }
 
         /** @var list<string> $excludeGroups */
         $excludeGroups = $input->getOption('exclude-group');
 
         if ($excludeGroups !== []) {
-            $phpunitCmd[] = '--exclude-group';
-            $phpunitCmd[] = implode(',', $excludeGroups);
+            $testCmd[] = '--exclude-group';
+            $testCmd[] = implode(',', $excludeGroups);
         }
 
         if ($input->getOption('failed')) {
@@ -122,15 +143,15 @@ class TestsCommand extends Command
                 static fn(string $test): string => preg_quote($test, '/'),
                 $failedTests,
             ));
-            $phpunitCmd[] = '--filter';
-            $phpunitCmd[] = $filter;
+            $testCmd[] = '--filter';
+            $testCmd[] = $filter;
 
             $io->note(sprintf('Re-running %d previously failed test(s).', count($failedTests)));
         }
 
-        $io->section('Running PHPUnit');
+        $io->section($parallelProcesses !== null ? sprintf('Running ParaTest (%d processes)', $parallelProcesses) : 'Running PHPUnit');
 
-        $exitCode = $this->runProcess($phpunitCmd, $output);
+        $exitCode = $this->runProcess($testCmd, $output);
 
         if ($exitCode === 0 && $input->getOption('failed')) {
             $this->clearDefects();
@@ -307,7 +328,14 @@ class TestsCommand extends Command
     /** @param list<string> $command */
     protected function runProcess(array $command, OutputInterface $output): int
     {
-        $process = new Process($command, $this->projectDir);
+        $env = getenv();
+
+        // Prevent git "dubious ownership" warnings in Docker containers
+        $env['GIT_CONFIG_COUNT'] = '1';
+        $env['GIT_CONFIG_KEY_0'] = 'safe.directory';
+        $env['GIT_CONFIG_VALUE_0'] = '*';
+
+        $process = new Process($command, $this->projectDir, $env);
         $process->setTimeout(null);
         $process->run(static function (string $type, string $buffer) use ($output): void {
             $output->write($buffer);
