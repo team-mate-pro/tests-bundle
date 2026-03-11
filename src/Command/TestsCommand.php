@@ -35,7 +35,8 @@ class TestsCommand extends Command
             ->addOption('suite', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Test suite(s) to run (e.g. --suite unit --suite integration)')
             ->addOption('group', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Test group(s) to include (e.g. --group fast --group critical)')
             ->addOption('exclude-group', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Test group(s) to exclude (e.g. --exclude-group slow --exclude-group flaky)')
-            ->addOption('parallel', null, InputOption::VALUE_REQUIRED, 'Run tests in parallel using N processes (requires paratest)');
+            ->addOption('parallel', null, InputOption::VALUE_REQUIRED, 'Run tests in parallel using N processes (requires paratest)')
+            ->addOption('no-warmup', null, InputOption::VALUE_NONE, 'Skip tests:warmup step (useful for unit tests that run in isolation)');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -44,7 +45,9 @@ class TestsCommand extends Command
 
         $decorated = $output->isDecorated();
 
-        if ($this->composerFileReader->hasScript('tests:warmup')) {
+        $skipWarmup = $input->getOption('no-warmup');
+
+        if (!$skipWarmup && $this->composerFileReader->hasScript('tests:warmup')) {
             $io->section('Running tests:warmup');
 
             $warmupCmd = ['composer', 'run', 'tests:warmup'];

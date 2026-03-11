@@ -152,6 +152,18 @@ class TestsCommandTest extends TestCase
         self::assertSame('php', $command->executedCommands[0][0]);
     }
 
+    public function testNoWarmupSkipsWarmupEvenWhenScriptExists(): void
+    {
+        $command = $this->createTestableCommand(hasWarmup: true);
+        $tester = new CommandTester($command);
+
+        $tester->execute(['--no-warmup' => true]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertCount(1, $command->executedCommands);
+        self::assertSame('php', $command->executedCommands[0][0]);
+    }
+
     public function testCoveragePassesWhenAboveThreshold(): void
     {
         $command = $this->createTestableCommand(hasWarmup: false);
