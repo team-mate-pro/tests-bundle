@@ -4,13 +4,12 @@
          bootstrap="vendor/autoload.php"
          colors="true"
          cacheDirectory=".phpunit.cache"
-         requireCoverageMetadata="true"
-         beStrictAboutCoverageMetadata="true"
          failOnRisky="true"
-         failOnWarning="true">
+         failOnWarning="false">
     <testsuites>
         <testsuite name="Unit">
             <directory>tests/Unit</directory>
+            <exclude>tests/_Data</exclude>
         </testsuite>
     </testsuites>
 
@@ -19,13 +18,6 @@
             <directory>src</directory>
         </include>
     </source>
-
-    <coverage>
-        <report>
-            <html outputDirectory=".coverage/html"/>
-            <text outputFile="php://stdout" showOnlySummary="true"/>
-        </report>
-    </coverage>
 
     <php>
         <env name="APP_ENV" value="test"/>

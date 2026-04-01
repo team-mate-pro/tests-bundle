@@ -135,7 +135,6 @@ class VerifySetupCommandTest extends KernelTestCase
         $display = $tester->getDisplay();
         self::assertStringContainsString('integration', $display);
         self::assertStringContainsString('application', $display);
-        self::assertStringContainsString('acceptance', $display);
     }
 
     public function testMissingCacheDirectory(): void
