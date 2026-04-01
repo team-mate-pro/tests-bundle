@@ -27,8 +27,8 @@ WORKDIR /app
 
 COPY . .
 
-# Install Composer dependencies, including dev dependencies for testing
-RUN composer install --no-ansi --no-interaction --no-progress --optimize-autoloader
+# Install Composer dependencies (update since no lock file)
+RUN composer update --no-ansi --no-interaction --no-progress --optimize-autoloader
 
 # Add vendor/bin to PATH
 ENV PATH="/app/vendor/bin:${PATH}"

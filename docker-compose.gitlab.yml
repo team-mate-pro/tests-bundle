@@ -10,7 +10,7 @@ services:
     volumes:
       - .:/app
     entrypoint: []
-    command: [ "bash", "-c", "composer install --no-ansi --no-interaction --no-progress && sleep infinity" ]
+    command: [ "bash", "-c", "composer update --no-ansi --no-interaction --no-progress && sleep infinity" ]
     tty: true
     stdin_open: true
 
