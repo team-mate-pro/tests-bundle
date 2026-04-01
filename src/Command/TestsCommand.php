@@ -120,17 +120,17 @@ class TestsCommand extends Command
         /** @var list<string> $groups */
         $groups = $input->getOption('group');
 
-        if ($groups !== []) {
+        foreach ($groups as $group) {
             $testCmd[] = '--group';
-            $testCmd[] = implode(',', $groups);
+            $testCmd[] = $group;
         }
 
         /** @var list<string> $excludeGroups */
         $excludeGroups = $input->getOption('exclude-group');
 
-        if ($excludeGroups !== []) {
+        foreach ($excludeGroups as $excludeGroup) {
             $testCmd[] = '--exclude-group';
-            $testCmd[] = implode(',', $excludeGroups);
+            $testCmd[] = $excludeGroup;
         }
 
         if ($input->getOption('failed')) {
