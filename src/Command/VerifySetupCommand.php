@@ -17,7 +17,7 @@ use TeamMatePro\TestsBundle\ComposerFileReader;
 )]
 class VerifySetupCommand extends Command
 {
-    private const REQUIRED_SUITES = ['unit', 'integration', 'application'];
+    private const REQUIRED_SUITES = ['unit', 'integration', 'application', 'acceptance'];
 
     public function __construct(
         private readonly string $projectDir,
