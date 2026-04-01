@@ -2,13 +2,14 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: docker/app/Dockerfile
+      target: bash
     container_name: tests-bundle-app
-    working_dir: /app
     volumes:
       - .:/app
-    environment:
-      - APP_ENV=test
-    entrypoint: bash -c "composer install --no-interaction --quiet 2>/dev/null; exec bash"
-    stdin_open: true
+      - ./vendor:/app/vendor
+    working_dir: /app
+    entrypoint: []
+    command: ["bash", "-c", "composer install --no-ansi --no-interaction --no-progress && sleep infinity"]
     tty: true
+    stdin_open: true

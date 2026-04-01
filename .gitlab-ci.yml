@@ -1,0 +1,21 @@
+# =============================================================================
+# tests-bundle CI/CD configuration
+# Uses shared templates from sh/tmp-infra
+# =============================================================================
+#
+# This is a PHP library (Composer package), not a deployable app.
+# Static analysis + auto-publish to GitHub public mirror on main.
+#
+# =============================================================================
+
+variables:
+  STATIC_ANALYSIS_INLINE: "true"
+  COMPOSE_FILE: docker-compose.gitlab.yml
+
+include:
+  - project: 'sh/tmp-infra'
+    ref: main
+    file:
+      - '/templates/common.yml'
+      - '/templates/docker-app-php-apache/static-analysis.yml'
+      - '/templates/library/publish_public.yml'

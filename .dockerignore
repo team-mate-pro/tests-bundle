@@ -1,0 +1,21 @@
+# IDE
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# Docker
+.dockerignore
+docker-compose*.yml
+
+# Cache
+.phpcs-cache
+.phpunit.cache/
+.coverage/
+
+# Vendor - installed during build
+vendor/
+
+# Test fixtures vendor - causes PHPUnit conflicts
+tests/_Data/SymfonyProject/vendor/
