@@ -9,7 +9,6 @@
 # =============================================================================
 
 variables:
-  STATIC_ANALYSIS_INLINE: "true"
   COMPOSE_FILE: docker-compose.gitlab.yml
 
 include:
