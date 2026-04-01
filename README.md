@@ -23,6 +23,7 @@ Runs `tests:warmup` (if defined in `composer.json`) and then executes PHPUnit. P
 
 **Usage:**
 
+
 ```bash
 php bin/console tmp:tests
 php bin/console tmp:tests --failed
