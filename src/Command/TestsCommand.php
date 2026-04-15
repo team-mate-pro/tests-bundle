@@ -105,6 +105,7 @@ class TestsCommand extends Command
 
         // Only add --coverage-clover if not configured in phpunit.xml
         if ($coverageThreshold !== null && $cloverFileFromConfig === null) {
+            $io->warning('No <coverage><report><clover outputFile="..."/></report></coverage> found in phpunit.xml. Using a temporary file for coverage report. Consider adding this configuration to your phpunit.xml.');
             $testCmd[] = '--coverage-clover';
             $testCmd[] = $cloverFile;
         }

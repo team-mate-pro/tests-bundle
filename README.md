@@ -56,7 +56,7 @@ PHPUnit 10+ stores test results in `.phpunit.cache/test-results` (JSON). The com
 
 **How `--coverage` works:**
 
-Passes `--coverage-clover` to PHPUnit, then parses the generated Clover XML to calculate line coverage (`coveredstatements / statements * 100`). If `<coverage><report><clover outputFile="..."/></report></coverage>` is configured in `phpunit.xml`, uses that path instead of generating a temporary file.
+Passes `--coverage-clover` to PHPUnit, then parses the generated Clover XML to calculate line coverage (`coveredstatements / statements * 100`). If `<coverage><report><clover outputFile="..."/></report></coverage>` is configured in `phpunit.xml`, uses that path instead of generating a temporary file. When the clover configuration is missing from `phpunit.xml`, a warning is displayed recommending you add it.
 
 **How `--parallel` works:**
 

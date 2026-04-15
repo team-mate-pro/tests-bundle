@@ -348,9 +348,12 @@ class TestsCommandTest extends TestCase
 
         self::assertSame(0, $tester->getStatusCode());
         $phpunitCmd = $command->executedCommands[count($command->executedCommands) - 1];
-        $groupIndex = array_search('--group', $phpunitCmd, true);
-        self::assertIsInt($groupIndex);
-        self::assertSame('fast,critical', $phpunitCmd[$groupIndex + 1]);
+        $firstGroupIndex = array_search('--group', $phpunitCmd, true);
+        self::assertIsInt($firstGroupIndex);
+        self::assertSame('fast', $phpunitCmd[$firstGroupIndex + 1]);
+        $secondGroupIndex = array_search('--group', array_slice($phpunitCmd, $firstGroupIndex + 2, preserve_keys: true), true);
+        self::assertIsInt($secondGroupIndex);
+        self::assertSame('critical', $phpunitCmd[$secondGroupIndex + 1]);
     }
 
     public function testGroupNotPassedWithoutOption(): void
@@ -387,9 +390,12 @@ class TestsCommandTest extends TestCase
 
         self::assertSame(0, $tester->getStatusCode());
         $phpunitCmd = $command->executedCommands[count($command->executedCommands) - 1];
-        $excludeIndex = array_search('--exclude-group', $phpunitCmd, true);
-        self::assertIsInt($excludeIndex);
-        self::assertSame('flaky,slow', $phpunitCmd[$excludeIndex + 1]);
+        $firstExcludeIndex = array_search('--exclude-group', $phpunitCmd, true);
+        self::assertIsInt($firstExcludeIndex);
+        self::assertSame('flaky', $phpunitCmd[$firstExcludeIndex + 1]);
+        $secondExcludeIndex = array_search('--exclude-group', array_slice($phpunitCmd, $firstExcludeIndex + 2, preserve_keys: true), true);
+        self::assertIsInt($secondExcludeIndex);
+        self::assertSame('slow', $phpunitCmd[$secondExcludeIndex + 1]);
     }
 
     public function testExcludeGroupNotPassedWithoutOption(): void
