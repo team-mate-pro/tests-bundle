@@ -157,6 +157,8 @@ class TestsCommand extends Command
 
         $exitCode = $this->runProcess($testCmd, $output);
 
+        $this->rebaseCloverPaths($cloverFile);
+
         if ($exitCode === 0 && $input->getOption('failed')) {
             $this->clearDefects();
         }
@@ -299,6 +301,32 @@ class TestsCommand extends Command
 
         $data['defects'] = new stdClass();
         file_put_contents($cacheFile, json_encode($data));
+    }
+
+    /**
+     * Rewrites absolute project paths in the clover XML to relative form (./...).
+     * Why: phpunit emits absolute paths from the process cwd (e.g. /app/src/...
+     * inside Docker), which prevents host-side tools (PhpStorm coverage view,
+     * SonarQube on a different runner) from mapping entries to local files
+     * without configuring path mappings.
+     */
+    private function rebaseCloverPaths(string $cloverFile): void
+    {
+        if (!file_exists($cloverFile)) {
+            return;
+        }
+
+        $content = @file_get_contents($cloverFile);
+
+        if ($content === false) {
+            return;
+        }
+
+        $rebased = str_replace($this->projectDir . '/', './', $content);
+
+        if ($rebased !== $content) {
+            @file_put_contents($cloverFile, $rebased);
+        }
     }
 
     private function parseCoverageFromClover(string $cloverFile): ?float

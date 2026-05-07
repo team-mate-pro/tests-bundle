@@ -5,6 +5,12 @@ Wszystkie istotne zmiany w tym projekcie będą dokumentowane w tym pliku.
 Format oparty na [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 a projekt stosuje [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.26.0] - 2026-05-07
+
+### Added
+
+- Automatyczna zamiana absolutnych ścieżek w raporcie clover na ścieżki względne (`./...`) po wygenerowaniu pokrycia. Dzięki temu narzędzia zewnętrzne (PhpStorm coverage view, SonarQube) mogą czytać raport z hosta bez konfigurowania path mappingu, gdy testy uruchamiane są w kontenerze Docker.
+
 ## [1.25.1] - 2026-04-15
 
 ### Added
